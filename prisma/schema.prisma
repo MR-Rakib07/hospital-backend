@@ -13,3 +13,54 @@ datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+  STAFF
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+model User {
+  id                   String         @id @default(auto()) @map("_id") @db.ObjectId
+  email                String         @unique
+  password             String
+  role                 Role           @default(PATIENT)
+  fullName             String
+  phone                String
+  dateOfBirth          DateTime?
+  gender               Gender?
+  bloodGroup           BloodGroup?
+  maritalStatus        MaritalStatus?
+  presentAddress       String?
+  permanentAddress     String?
+  emergencyContactName String?
+  emergencyRelation    String?
+  emergencyPhone       String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+}

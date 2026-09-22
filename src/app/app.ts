@@ -4,7 +4,7 @@ dotenv.config();
 import express from "express";
 import type { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
-
+import authRoutes from '../routes/auth/auth.routes';
 const app: Application = express();
 
 app.use(cors());
@@ -16,6 +16,7 @@ app.get("/", (_req: Request, res: Response) => {
     message: "Server is running smoothly",
   });
 });
+app.use('/api/auth', authRoutes);
 
 app.use((req: Request, res: Response, _next: NextFunction) => {
   res.status(404).json({
