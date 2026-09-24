@@ -1,30 +1,42 @@
 import type { NextFunction, Request, Response } from "express";
-import { changePasswordService, getMyProfile, loginUser, refreshAccessToken, registerUser, updateProfileService } from "../../services/auth/auth.services";
-import type { AuthenticatedRequest } from "../../middlewares/auth.middleware";
+import {
+  changePasswordService,
+  getMyProfile,
+  loginUser,
+  refreshAccessToken,
+  registerUser,
+  updateProfileService,
+} from "../../services/auth/auth.services";
 
-// register
-export const register = async(req:Request,res:Response, next:NextFunction)=>{
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const user = await registerUser(req.body)
+    const user = await registerUser(req.body);
     res.status(201).json({
-      success:true,
-      message:'user registered successfully',
-      data:user
-    })
-  } catch (error:any) {
-    next(error)
+      success: true,
+      message: "user registered successfully",
+      data: user,
+    });
+  } catch (error) {
+    next(error);
   }
-}
+};
 
-// login
-export const login = async (req: Request, res: Response, next: NextFunction) => {
+export const login = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { accessToken, refreshToken } = await loginUser(req.body);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -32,17 +44,19 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       success: true,
       message: "User logged in successfully",
       accessToken,
-      
     });
   } catch (error) {
     next(error);
   }
 };
 
-// refreshToken
-export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
+export const refreshToken = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const token = req.cookies.refreshToken;
+    const token = req.cookies?.refreshToken;
     const result = await refreshAccessToken(token);
 
     res.status(200).json({
@@ -54,13 +68,17 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
     next(error);
   }
 };
-// logout
-export const logout = async (req: Request, res: Response, next: NextFunction) => {
+
+export const logout = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
 
     res.status(200).json({
@@ -72,10 +90,14 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
   }
 };
 
-// getME
-export const getMe = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const getMe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const user = await getMyProfile(req.user.id);
+    const userId = req.user!.userId;
+    const user = await getMyProfile(userId);
 
     res.status(200).json({
       success: true,
@@ -87,17 +109,17 @@ export const getMe = async (req: AuthenticatedRequest, res: Response, next: Next
   }
 };
 
-// changePassword
 export const changePassword = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const { oldPassword, newPassword } = req.body;
+    const userId = req.user!.userId;
 
     const result = await changePasswordService({
-      userId: req.user!.id,
+      userId,
       oldPassword,
       newPassword,
     });
@@ -111,16 +133,16 @@ export const changePassword = async (
   }
 };
 
-// updateProfile 
 export const updateProfile = async (
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { email, password, role, id, ...allowedUpdates } = req.body;
+    const { email: _email, password: _password, role: _role, id: _id, ...allowedUpdates } = req.body;
+    const userId = req.user!.userId;
 
-    const user = await updateProfileService(req.user!.id, allowedUpdates);
+    const user = await updateProfileService(userId, allowedUpdates);
 
     res.status(200).json({
       success: true,

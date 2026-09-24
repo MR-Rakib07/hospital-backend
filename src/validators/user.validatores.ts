@@ -14,7 +14,7 @@ export const registerUserSchema = z.object({
       .enum(['PATIENT', 'DOCTOR', 'ADMIN', 'STAFF'])
       .default('PATIENT'),
 
-    fullName: z
+    fullname: z
       .string()
       .trim()
       .min(2, 'Full name must be at least 2 characters long'),

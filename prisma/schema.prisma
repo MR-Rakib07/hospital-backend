@@ -50,7 +50,7 @@ model User {
   email                String         @unique
   password             String
   role                 Role           @default(PATIENT)
-  fullName             String
+  fullname             String
   phone                String
   dateOfBirth          DateTime?
   gender               Gender?
