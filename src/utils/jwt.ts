@@ -8,7 +8,7 @@ interface TokenPayload {
 
 export const generateAccessToken = (payload: TokenPayload): string => {
   const secret: Secret = process.env.JWT_ACCESS_SECRET || "access_secret_key";
-  const expiresIn = (process.env.JWT_ACCESS_EXPIRES_IN || "1m") as SignOptions["expiresIn"];
+  const expiresIn = (process.env.JWT_ACCESS_EXPIRES_IN || "15m") as SignOptions["expiresIn"];
 
   return jwt.sign(payload, secret, { expiresIn });
 };

@@ -16,6 +16,13 @@ interface UserTokenPayload extends JwtPayload {
   email: string;
 }
 
+export class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotFoundError';
+  }
+}
+
 export const registerUser = async (data: RegisterUserInput) => {
   const existingUser = await prisma.user.findUnique({
     where: { email: data.email },
@@ -166,4 +173,21 @@ export const updateProfileService = async (
   const safeUser = { ...updatedUser };
   delete (safeUser as { password?: string }).password;
   return safeUser;
+};
+
+
+export const deleteAccountService = async (userId: string) => {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!existingUser) {
+    throw new AppError(404, "User not found");
+  }
+
+  await prisma.user.delete({
+    where: { id: userId },
+  });
+
+  return { message: "Account deleted permanently" };
 };

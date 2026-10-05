@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import {
   changePasswordService,
+  deleteAccountService,
   getMyProfile,
   loginUser,
   refreshAccessToken,
@@ -148,6 +149,33 @@ export const updateProfile = async (
       success: true,
       message: "Profile updated successfully",
       data: user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const deleteAccount = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.userId;
+
+    const result = await deleteAccountService(userId);
+
+    // অ্যাকাউন্ট ডিলিট হওয়ার পর রিফ্রেশ টোকেন কুকি ক্লিয়ার করে দেওয়া নিরাপদ
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
     });
   } catch (error) {
     next(error);
