@@ -6,6 +6,8 @@ import type { Application, Request, Response, NextFunction } from "express";
 import cors, { type CorsOptions } from "cors";
 import cookieParser from "cookie-parser";
 import authRoutes from "../routes/auth/auth.routes";
+import doctorRoutes from "../routes/doctor/doctor.routes";
+import adminRoutes from '../routes/admin/admin.routes';
 
 const app: Application = express();
 
@@ -31,8 +33,9 @@ app.get("/", (_req: Request, res: Response) => {
     message: "Server is running smoothly",
   });
 });
-
+app.use('/api/admin', adminRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/doctors", doctorRoutes);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({

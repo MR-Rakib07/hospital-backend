@@ -1,6 +1,10 @@
 import bcrypt from "bcryptjs";
 import prisma from "../../lib/prisma";
-import type { LoginUserInput, RegisterUserInput, UpdateProfileInput } from "../../validators/user.validatores";
+import type {
+  LoginUserInput,
+  RegisterUserInput,
+  UpdateProfileInput,
+} from "../../validators/user.validatores";
 import { AppError } from "../../errors/AppError";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
 import jwt, { type JwtPayload } from "jsonwebtoken";
@@ -14,13 +18,6 @@ interface ChangePasswordInput {
 interface UserTokenPayload extends JwtPayload {
   id: string;
   email: string;
-}
-
-export class NotFoundError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'NotFoundError';
-  }
 }
 
 export const registerUser = async (data: RegisterUserInput) => {
@@ -41,8 +38,7 @@ export const registerUser = async (data: RegisterUserInput) => {
     },
   });
 
-  const safeUser = { ...user };
-  delete (safeUser as { password?: string }).password;
+  const { password: _password, ...safeUser } = user;
   return safeUser;
 };
 
@@ -64,6 +60,7 @@ export const loginUser = async (data: LoginUserInput) => {
   const payload = {
     id: user.id,
     email: user.email,
+    role: user.role,
   };
 
   const accessToken = generateAccessToken(payload);
@@ -99,6 +96,7 @@ export const refreshAccessToken = async (token: string) => {
   const newAccessToken = generateAccessToken({
     id: user.id,
     email: user.email,
+    role: user.role,
   });
 
   return { accessToken: newAccessToken };
@@ -107,15 +105,17 @@ export const refreshAccessToken = async (token: string) => {
 export const getMyProfile = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
+    include: {
+      doctorProfile: true,
+      adminProfile: true,
+    },
   });
 
   if (!user) {
     throw new AppError(404, "User not found");
   }
 
-  const safeUser = { ...user };
-  delete (safeUser as { password?: string }).password;
-
+  const { password: _password, ...safeUser } = user;
   return safeUser;
 };
 
@@ -159,22 +159,19 @@ export const updateProfileService = async (
     throw new AppError(404, "User not found");
   }
 
-  const updateData: Record<string, unknown> = { ...payload };
-
-  if (payload.dateOfBirth) {
-    updateData.dateOfBirth = new Date(payload.dateOfBirth);
-  }
+  const { dateOfBirth, ...restPayload } = payload;
 
   const updatedUser = await prisma.user.update({
     where: { id: userId },
-    data: updateData,
+    data: {
+      ...restPayload,
+      ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+    },
   });
 
-  const safeUser = { ...updatedUser };
-  delete (safeUser as { password?: string }).password;
+  const { password: _password, ...safeUser } = updatedUser;
   return safeUser;
 };
-
 
 export const deleteAccountService = async (userId: string) => {
   const existingUser = await prisma.user.findUnique({

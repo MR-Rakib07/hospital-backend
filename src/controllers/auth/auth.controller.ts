@@ -18,7 +18,7 @@ export const register = async (
     const user = await registerUser(req.body);
     res.status(201).json({
       success: true,
-      message: "user registered successfully",
+      message: "User registered successfully",
       data: user,
     });
   } catch (error) {
@@ -140,7 +140,13 @@ export const updateProfile = async (
   next: NextFunction
 ) => {
   try {
-    const { email: _email, password: _password, role: _role, id: _id, ...allowedUpdates } = req.body;
+    const {
+      email: _email,
+      password: _password,
+      role: _role,
+      id: _id,
+      ...allowedUpdates
+    } = req.body;
     const userId = req.user!.userId;
 
     const user = await updateProfileService(userId, allowedUpdates);
@@ -155,7 +161,6 @@ export const updateProfile = async (
   }
 };
 
-
 export const deleteAccount = async (
   req: Request,
   res: Response,
@@ -166,7 +171,6 @@ export const deleteAccount = async (
 
     const result = await deleteAccountService(userId);
 
-    // অ্যাকাউন্ট ডিলিট হওয়ার পর রিফ্রেশ টোকেন কুকি ক্লিয়ার করে দেওয়া নিরাপদ
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
