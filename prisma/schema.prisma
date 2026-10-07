@@ -39,11 +39,18 @@ enum MaritalStatus {
   WIDOWED
 }
 
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
 model User {
-  id                   String         @id @default(auto()) @map("_id") @db.ObjectId
-  email                String         @unique
+  id                   String          @id @default(auto()) @map("_id") @db.ObjectId
+  email                String          @unique
   password             String
-  role                 Role           @default(PATIENT)
+  role                 Role            @default(PATIENT)
   fullname             String
   phone                String
   dateOfBirth          DateTime?
@@ -57,16 +64,17 @@ model User {
   emergencyPhone       String?
   doctorProfile        DoctorProfile?
   adminProfile         AdminProfile?
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  appointments         Appointment[]   @relation("PatientAppointments")
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 
   @@map("users")
 }
 
 model DoctorProfile {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId         String   @unique @db.ObjectId
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String          @unique @db.ObjectId
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   department     String
   specialization String
   designation    String?
@@ -74,9 +82,10 @@ model DoctorProfile {
   fee            Float
   image          String?
   availableDays  String[]
-  isAvailable    Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  isAvailable    Boolean         @default(true)
+  appointments   Appointment[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@map("doctor_profiles")
 }
@@ -91,4 +100,20 @@ model AdminProfile {
   updatedAt   DateTime @updatedAt
 
   @@map("admin_profiles")
+}
+
+model Appointment {
+  id              String            @id @default(auto()) @map("_id") @db.ObjectId
+  patientId       String            @db.ObjectId
+  patient         User              @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId        String            @db.ObjectId
+  doctor          DoctorProfile     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointmentDate DateTime
+  serialNumber    Int
+  problemDetails  String?
+  status          AppointmentStatus @default(PENDING)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@map("appointments")
 }
