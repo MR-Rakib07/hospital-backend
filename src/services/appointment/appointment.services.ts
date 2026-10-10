@@ -1,37 +1,51 @@
-import prisma from "../../lib/prisma";
-import { AppError } from "../../errors/AppError";
+import prisma from "../../lib/prisma"
+import { AppError } from "../../errors/AppError"
+
+export type AppointmentStatusType = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED"
 
 interface CreateAppointmentInput {
-  patientId: string;
-  doctorId: string;
-  appointmentDate: string;
-  problemDetails?: string;
+  patientId: string
+  doctorId: string
+  appointmentDate: string
+  problemDetails?: string
 }
 
-type AppointmentStatusType = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+interface AppointmentWhereFilter {
+  doctorId?: string
+  appointmentDate?: {
+    gte: Date
+    lte: Date
+  }
+}
 
 export const createAppointmentService = async (data: CreateAppointmentInput) => {
   const doctor = await prisma.doctorProfile.findUnique({
     where: { id: data.doctorId },
-  });
+  })
 
   if (!doctor) {
-    throw new AppError(404, "Doctor not found");
+    throw new AppError(404, "Doctor not found")
   }
 
   if (!doctor.isAvailable) {
-    throw new AppError(400, "Doctor is currently not accepting appointments");
+    throw new AppError(400, "Doctor is currently not accepting appointments")
   }
 
-  const requestedDate = new Date(data.appointmentDate);
-  const dayName = requestedDate.toLocaleDateString("en-US", { weekday: "long" });
+  const requestedDate = new Date(data.appointmentDate)
+  const dayName = requestedDate.toLocaleDateString("en-US", { weekday: "long" })
 
   if (!doctor.availableDays.includes(dayName)) {
-    throw new AppError(400, `Doctor is not available on ${dayName}. Available days: ${doctor.availableDays.join(", ")}`);
+    throw new AppError(
+      400,
+      `Doctor is not available on ${dayName}. Available days: ${doctor.availableDays.join(", ")}`
+    )
   }
 
-  const startOfDay = new Date(requestedDate.setHours(0, 0, 0, 0));
-  const endOfDay = new Date(requestedDate.setHours(23, 59, 59, 999));
+  const startOfDay = new Date(requestedDate)
+  startOfDay.setHours(0, 0, 0, 0)
+
+  const endOfDay = new Date(requestedDate)
+  endOfDay.setHours(23, 59, 59, 999)
 
   const existingAppointment = await prisma.appointment.findFirst({
     where: {
@@ -43,10 +57,10 @@ export const createAppointmentService = async (data: CreateAppointmentInput) => 
       },
       status: { not: "CANCELLED" },
     },
-  });
+  })
 
   if (existingAppointment) {
-    throw new AppError(400, "You already have an appointment with this doctor on this day");
+    throw new AppError(400, "You already have an appointment with this doctor on this day")
   }
 
   const totalBookedToday = await prisma.appointment.count({
@@ -57,11 +71,11 @@ export const createAppointmentService = async (data: CreateAppointmentInput) => 
         lte: endOfDay,
       },
     },
-  });
+  })
 
-  const nextSerial = totalBookedToday + 1;
+  const nextSerial = totalBookedToday + 1
 
-  const appointment = await prisma.appointment.create({
+  return prisma.appointment.create({
     data: {
       patientId: data.patientId,
       doctorId: data.doctorId,
@@ -77,11 +91,12 @@ export const createAppointmentService = async (data: CreateAppointmentInput) => 
           },
         },
       },
+      patient: {
+        select: { fullname: true, phone: true, email: true },
+      },
     },
-  });
-
-  return appointment;
-};
+  })
+}
 
 export const getMyAppointmentsService = async (patientId: string) => {
   return prisma.appointment.findMany({
@@ -96,38 +111,59 @@ export const getMyAppointmentsService = async (patientId: string) => {
       },
     },
     orderBy: { appointmentDate: "desc" },
-  });
-};
+  })
+}
 
-export const getDoctorAppointmentsService = async (doctorUserId: string, date?: string) => {
-  const doctor = await prisma.doctorProfile.findUnique({
-    where: { userId: doctorUserId },
-  });
+export const getDoctorAppointmentsService = async (
+  userId: string,
+  userRole: string,
+  date?: string
+) => {
+  const filter: AppointmentWhereFilter = {}
 
-  if (!doctor) {
-    throw new AppError(404, "Doctor profile not found");
+  if (userRole === "DOCTOR") {
+    const doctor = await prisma.doctorProfile.findUnique({
+      where: { userId },
+    })
+
+    if (!doctor) {
+      throw new AppError(404, "Doctor profile not found")
+    }
+
+    filter.doctorId = doctor.id
   }
 
-  const filter: Record<string, unknown> = { doctorId: doctor.id };
-
   if (date) {
-    const target = new Date(date);
+    const target = new Date(date)
+    const startOfDay = new Date(target)
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const endOfDay = new Date(target)
+    endOfDay.setHours(23, 59, 59, 999)
+
     filter.appointmentDate = {
-      gte: new Date(target.setHours(0, 0, 0, 0)),
-      lte: new Date(target.setHours(23, 59, 59, 999)),
-    };
+      gte: startOfDay,
+      lte: endOfDay,
+    }
   }
 
   return prisma.appointment.findMany({
     where: filter,
     include: {
       patient: {
-        select: { fullname: true, phone: true, gender: true, bloodGroup: true },
+        select: { id: true, fullname: true, phone: true, email: true, gender: true },
+      },
+      doctor: {
+        include: {
+          user: {
+            select: { id: true, fullname: true, email: true },
+          },
+        },
       },
     },
-    orderBy: [{ appointmentDate: "asc" }, { serialNumber: "asc" }],
-  });
-};
+    orderBy: [{ appointmentDate: "desc" }, { serialNumber: "asc" }],
+  })
+}
 
 export const updateAppointmentStatusService = async (
   appointmentId: string,
@@ -135,17 +171,29 @@ export const updateAppointmentStatusService = async (
 ) => {
   const appointment = await prisma.appointment.findUnique({
     where: { id: appointmentId },
-  });
+  })
 
   if (!appointment) {
-    throw new AppError(404, "Appointment not found");
+    throw new AppError(404, "Appointment not found")
   }
 
   return prisma.appointment.update({
     where: { id: appointmentId },
     data: { status },
-  });
-};
+    include: {
+      patient: {
+        select: { id: true, fullname: true, phone: true },
+      },
+      doctor: {
+        include: {
+          user: {
+            select: { id: true, fullname: true },
+          },
+        },
+      },
+    },
+  })
+}
 
 export const cancelAppointmentService = async (
   appointmentId: string,
@@ -154,22 +202,34 @@ export const cancelAppointmentService = async (
 ) => {
   const appointment = await prisma.appointment.findUnique({
     where: { id: appointmentId },
-  });
+  })
 
   if (!appointment) {
-    throw new AppError(404, "Appointment not found");
+    throw new AppError(404, "Appointment not found")
   }
 
   if (userRole === "PATIENT" && appointment.patientId !== userId) {
-    throw new AppError(403, "You can only cancel your own appointments");
+    throw new AppError(403, "You can only cancel your own appointments")
   }
 
   if (appointment.status === "COMPLETED") {
-    throw new AppError(400, "Completed appointments cannot be cancelled");
+    throw new AppError(400, "Completed appointments cannot be cancelled")
   }
 
   return prisma.appointment.update({
     where: { id: appointmentId },
     data: { status: "CANCELLED" },
-  });
-};
+    include: {
+      patient: {
+        select: { id: true, fullname: true, phone: true },
+      },
+      doctor: {
+        include: {
+          user: {
+            select: { id: true, fullname: true },
+          },
+        },
+      },
+    },
+  })
+}
