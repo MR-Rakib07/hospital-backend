@@ -1,6 +1,10 @@
+import { Role } from '@prisma/client';
+
 export interface UserPayload {
   userId: string;
-  role: string;
+  email: string;
+  role: Role;
+  doctorProfileId?: string;
 }
 
 declare global {
@@ -10,3 +14,5 @@ declare global {
     }
   }
 }
+
+export {};

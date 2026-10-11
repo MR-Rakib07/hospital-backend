@@ -18,16 +18,12 @@ const router = Router()
 
 router.post(
   "/book",
-  authenticate,
-  authorize("PATIENT"),
   validate(createAppointmentSchema),
   createAppointment
 )
 
 router.get(
   "/my-appointments",
-  authenticate,
-  authorize("PATIENT"),
   getMyAppointments
 )
 

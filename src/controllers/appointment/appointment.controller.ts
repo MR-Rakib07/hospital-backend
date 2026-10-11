@@ -6,6 +6,8 @@ import {
   getMyAppointmentsService,
   updateAppointmentStatusService,
   type AppointmentStatusType,
+  type AppointmentTypeValue,
+  type GenderType,
 } from "../../services/appointment/appointment.services"
 import { AppError } from "../../errors/AppError"
 
@@ -15,21 +17,39 @@ export const createAppointment = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    if (!req.user?.userId) {
-      throw new AppError(401, "Unauthorized access")
-    }
-
-    const { doctorId, appointmentDate, problemDetails } = req.body as {
+    const {
+      doctorId,
+      appointmentDate,
+      type,
+      problemDetails,
+      patientName,
+      patientPhone,
+      patientEmail,
+      patientAge,
+      patientGender,
+    } = req.body as {
       doctorId: string
       appointmentDate: string
+      type?: AppointmentTypeValue
       problemDetails?: string
+      patientName: string
+      patientPhone: string
+      patientEmail: string
+      patientAge?: number
+      patientGender?: GenderType
     }
 
     const appointment = await createAppointmentService({
-      patientId: req.user.userId,
       doctorId,
       appointmentDate,
+      type,
       problemDetails,
+      patientName,
+      patientPhone,
+      patientEmail,
+      patientAge,
+      patientGender,
+      patientId: req.user?.userId,
     })
 
     res.status(201).json({
@@ -48,11 +68,16 @@ export const getMyAppointments = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    if (!req.user?.userId) {
-      throw new AppError(401, "Unauthorized access")
+    const identifier =
+      req.user?.userId ||
+      (typeof req.query.phone === "string" ? req.query.phone : undefined) ||
+      (typeof req.query.email === "string" ? req.query.email : undefined)
+
+    if (!identifier) {
+      throw new AppError(400, "Please provide patient phone or email, or login to view appointments")
     }
 
-    const appointments = await getMyAppointmentsService(req.user.userId)
+    const appointments = await getMyAppointmentsService(identifier)
 
     res.status(200).json({
       success: true,
@@ -98,7 +123,7 @@ export const updateAppointmentStatus = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const  id  = String(req.params.id)
+    const id = String(req.params.id)
     const { status } = req.body as { status: AppointmentStatusType }
 
     const updatedAppointment = await updateAppointmentStatusService(id, status)
@@ -123,7 +148,7 @@ export const cancelAppointment = async (
       throw new AppError(401, "Unauthorized access")
     }
 
-    const  id  = String(req.params.id)
+    const id = String(req.params.id)
 
     const cancelledAppointment = await cancelAppointmentService(
       id,

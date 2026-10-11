@@ -14,7 +14,7 @@ const router = Router();
 router.get("/", getAllDoctors);
 router.get("/:id", getDoctorById);
 router.post(
-  "/create",
+  "/",
   authenticate,
   authorize("ADMIN"),
   validate(createDoctorSchema),

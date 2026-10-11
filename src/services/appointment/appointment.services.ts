@@ -1,13 +1,22 @@
 import prisma from "../../lib/prisma"
 import { AppError } from "../../errors/AppError"
+import crypto from "crypto"
 
-export type AppointmentStatusType = "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED"
+export type AppointmentStatusType = "PENDING" | "CONFIRMED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
+export type AppointmentTypeValue = "ONLINE" | "OFFLINE"
+export type GenderType = "MALE" | "FEMALE" | "OTHER"
 
 interface CreateAppointmentInput {
-  patientId: string
   doctorId: string
   appointmentDate: string
+  type?: AppointmentTypeValue
   problemDetails?: string
+  patientName: string
+  patientPhone: string
+  patientEmail: string
+  patientAge?: number
+  patientGender?: GenderType
+  patientId?: string
 }
 
 interface AppointmentWhereFilter {
@@ -49,8 +58,8 @@ export const createAppointmentService = async (data: CreateAppointmentInput) => 
 
   const existingAppointment = await prisma.appointment.findFirst({
     where: {
-      patientId: data.patientId,
       doctorId: data.doctorId,
+      patientPhone: data.patientPhone,
       appointmentDate: {
         gte: startOfDay,
         lte: endOfDay,
@@ -60,7 +69,7 @@ export const createAppointmentService = async (data: CreateAppointmentInput) => 
   })
 
   if (existingAppointment) {
-    throw new AppError(400, "You already have an appointment with this doctor on this day")
+    throw new AppError(400, "An appointment already exists for this phone number with this doctor on this day")
   }
 
   const totalBookedToday = await prisma.appointment.count({
@@ -74,14 +83,47 @@ export const createAppointmentService = async (data: CreateAppointmentInput) => 
   })
 
   const nextSerial = totalBookedToday + 1
+  const appointmentType = data.type || "OFFLINE"
+
+  let meetingRoomId: string | null = null
+  let meetingLink: string | null = null
+
+  if (appointmentType === "ONLINE") {
+    meetingRoomId = crypto.randomUUID()
+    meetingLink = `/teleconsultation/${meetingRoomId}`
+  }
+
+  let resolvedPatientId: string | undefined = data.patientId || undefined
+
+  if (!resolvedPatientId) {
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ phone: data.patientPhone }, { email: data.patientEmail }],
+      },
+    })
+    if (existingUser) {
+      resolvedPatientId = existingUser.id
+    }
+  }
 
   return prisma.appointment.create({
     data: {
-      patientId: data.patientId,
-      doctorId: data.doctorId,
-      appointmentDate: startOfDay,
       serialNumber: nextSerial,
+      appointmentDate: startOfDay,
+      type: appointmentType,
+      status: "PENDING",
       problemDetails: data.problemDetails,
+      patientName: data.patientName,
+      patientPhone: data.patientPhone,
+      patientEmail: data.patientEmail,
+      patientAge: data.patientAge,
+      patientGender: data.patientGender,
+      meetingRoomId,
+      meetingLink,
+      paymentStatus: "UNPAID",
+      paidAmount: 0,
+      doctorId: data.doctorId,
+      ...(resolvedPatientId ? { patientId: resolvedPatientId } : {}),
     },
     include: {
       doctor: {
@@ -98,9 +140,15 @@ export const createAppointmentService = async (data: CreateAppointmentInput) => 
   })
 }
 
-export const getMyAppointmentsService = async (patientId: string) => {
+export const getMyAppointmentsService = async (identifier: string) => {
   return prisma.appointment.findMany({
-    where: { patientId },
+    where: {
+      OR: [
+        { patientId: identifier },
+        { patientPhone: identifier },
+        { patientEmail: identifier },
+      ],
+    },
     include: {
       doctor: {
         include: {
@@ -109,6 +157,7 @@ export const getMyAppointmentsService = async (patientId: string) => {
           },
         },
       },
+      prescription: true,
     },
     orderBy: { appointmentDate: "desc" },
   })
@@ -150,9 +199,6 @@ export const getDoctorAppointmentsService = async (
   return prisma.appointment.findMany({
     where: filter,
     include: {
-      patient: {
-        select: { id: true, fullname: true, phone: true, email: true, gender: true },
-      },
       doctor: {
         include: {
           user: {
@@ -160,6 +206,7 @@ export const getDoctorAppointmentsService = async (
           },
         },
       },
+      prescription: true,
     },
     orderBy: [{ appointmentDate: "desc" }, { serialNumber: "asc" }],
   })
@@ -181,9 +228,6 @@ export const updateAppointmentStatusService = async (
     where: { id: appointmentId },
     data: { status },
     include: {
-      patient: {
-        select: { id: true, fullname: true, phone: true },
-      },
       doctor: {
         include: {
           user: {
@@ -191,6 +235,7 @@ export const updateAppointmentStatusService = async (
           },
         },
       },
+      prescription: true,
     },
   })
 }
@@ -208,7 +253,7 @@ export const cancelAppointmentService = async (
     throw new AppError(404, "Appointment not found")
   }
 
-  if (userRole === "PATIENT" && appointment.patientId !== userId) {
+  if (userRole === "PATIENT" && appointment.patientId && appointment.patientId !== userId) {
     throw new AppError(403, "You can only cancel your own appointments")
   }
 
@@ -220,9 +265,6 @@ export const cancelAppointmentService = async (
     where: { id: appointmentId },
     data: { status: "CANCELLED" },
     include: {
-      patient: {
-        select: { id: true, fullname: true, phone: true },
-      },
       doctor: {
         include: {
           user: {

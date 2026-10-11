@@ -31,7 +31,9 @@ export const getAllDoctors = async (
   try {
     const { department } = req.query;
     const departmentFilter =
-      typeof department === 'string' ? department : undefined;
+      typeof department === 'string' && department.trim().length > 0
+        ? department.trim()
+        : undefined;
 
     const doctors = await getAllDoctorsService(departmentFilter);
 
@@ -46,13 +48,21 @@ export const getAllDoctors = async (
 };
 
 export const getDoctorById = async (
-  req: Request<{ id: string }>,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const { id } = req.params;
     const doctorId = Array.isArray(id) ? id[0] : id;
+
+    if (!doctorId) {
+      res.status(400).json({
+        success: false,
+        message: 'Doctor ID is required',
+      });
+      return;
+    }
 
     const doctor = await getDoctorByIdService(doctorId);
 

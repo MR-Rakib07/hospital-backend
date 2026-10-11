@@ -21,6 +21,8 @@ export const createDoctorService = async (data: CreateDoctorInput) => {
       fullname: data.fullname,
       phone: data.phone,
       role: "DOCTOR",
+      isActive: true,
+      isDeleted: false,
       doctorProfile: {
         create: {
           department: data.department,
@@ -28,8 +30,14 @@ export const createDoctorService = async (data: CreateDoctorInput) => {
           designation: data.designation,
           experience: data.experience,
           fee: data.fee,
+          teleconsultationFee: data.teleconsultationFee ?? 0,
           image: data.image,
           availableDays: data.availableDays,
+          visitingHours: data.visitingHours,
+          roomNumber: data.roomNumber,
+          floorNumber: data.floorNumber,
+          isAvailable: data.isAvailable ?? true,
+          isEmployed: data.isEmployed ?? true,
         },
       },
     },
@@ -45,13 +53,15 @@ export const createDoctorService = async (data: CreateDoctorInput) => {
 export const getAllDoctorsService = async (department?: string) => {
   const filter: Record<string, unknown> = {
     role: "DOCTOR",
+    isActive: true,
+    isDeleted: false,
+    doctorProfile: {
+      is: {
+        isEmployed: true,
+        ...(department ? { department } : {}),
+      },
+    },
   };
-
-  if (department) {
-    filter.doctorProfile = {
-      department: department,
-    };
-  }
 
   const doctors = await prisma.user.findMany({
     where: filter,
@@ -61,6 +71,9 @@ export const getAllDoctorsService = async (department?: string) => {
       email: true,
       phone: true,
       doctorProfile: true,
+    },
+    orderBy: {
+      createdAt: "desc",
     },
   });
 
@@ -72,6 +85,13 @@ export const getDoctorByIdService = async (id: string) => {
     where: {
       id,
       role: "DOCTOR",
+      isActive: true,
+      isDeleted: false,
+      doctorProfile: {
+        is: {
+          isEmployed: true,
+        },
+      },
     },
     select: {
       id: true,
@@ -82,8 +102,8 @@ export const getDoctorByIdService = async (id: string) => {
     },
   });
 
-  if (!doctor) {
-    throw new AppError(404, "Doctor not found");
+  if (!doctor || !doctor.doctorProfile) {
+    throw new AppError(404, "Doctor profile not found or inactive");
   }
 
   return doctor;
