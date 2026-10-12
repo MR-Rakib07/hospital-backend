@@ -4,12 +4,15 @@ import {
   getAllUsers,
   getUserById,
   createAdmin,
+  createStaff,
   updateUserRole,
   updateUserInfo,
   deleteUserByAdmin,
 } from '../../controllers/admin/admin.controller';
 import { authenticate } from '../../middlewares/auth.middleware';
 import { authorize } from '../../middlewares/authorize.middleware';
+import { validate } from '../../middlewares/validate.middleware';
+import { createStaffSchema } from '../../validators/staff.validator';
 
 const router = Router();
 
@@ -19,6 +22,7 @@ router.get('/stats', getAdminStats);
 router.get('/users', getAllUsers);
 router.get('/users/:id', getUserById);
 router.post('/create-admin', createAdmin);
+router.post('/create-staff', validate(createStaffSchema), createStaff);
 router.patch('/users/:id/role', updateUserRole);
 router.patch('/users/:id', updateUserInfo);
 router.delete('/users/:id', deleteUserByAdmin);

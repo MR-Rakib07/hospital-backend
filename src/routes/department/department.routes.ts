@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   createDepartment,
   createDesignation,
+  deleteDepartment,
+  deleteDesignation,
   getAllDepartments,
   getAllDesignations,
   getDoctorConfig,
@@ -14,14 +16,28 @@ import {
   createDepartmentSchema,
   createDesignationSchema,
   updateDepartmentSchema,
-} from "../../validators/user.validatores";
+} from "../../validators/department.validator";
 
 const router = Router();
 
 router.get("/doctor-config", getDoctorConfig);
 
-router.get("/", getAllDepartments);
+router.get("/designations", getAllDesignations);
+router.post(
+  "/designations",
+  authenticate,
+  authorize("ADMIN"),
+  validate(createDesignationSchema),
+  createDesignation
+);
+router.delete(
+  "/designations/:id",
+  authenticate,
+  authorize("ADMIN"),
+  deleteDesignation
+);
 
+router.get("/", getAllDepartments);
 router.post(
   "/",
   authenticate,
@@ -29,7 +45,6 @@ router.post(
   validate(createDepartmentSchema),
   createDepartment
 );
-
 router.patch(
   "/:id",
   authenticate,
@@ -37,15 +52,11 @@ router.patch(
   validate(updateDepartmentSchema),
   updateDepartment
 );
-
-router.get("/designations", getAllDesignations);
-
-router.post(
-  "/designations",
+router.delete(
+  "/:id",
   authenticate,
   authorize("ADMIN"),
-  validate(createDesignationSchema),
-  createDesignation
+  deleteDepartment
 );
 
 export default router;

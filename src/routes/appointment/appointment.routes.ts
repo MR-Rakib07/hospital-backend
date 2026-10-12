@@ -1,59 +1,79 @@
-import { Router } from "express"
+import { Router } from "express";
 import {
   cancelAppointment,
   createAppointment,
+  getAppointmentById,
   getDoctorAppointments,
   getMyAppointments,
   updateAppointmentStatus,
-} from "../../controllers/appointment/appointment.controller"
-import { authenticate } from "../../middlewares/auth.middleware"
-import { authorize } from "../../middlewares/authorize.middleware"
-import { validate } from "../../middlewares/validate.middleware"
+} from "../../controllers/appointment/appointment.controller";
+import { authenticate } from "../../middlewares/auth.middleware";
+import { authorize } from "../../middlewares/authorize.middleware";
+import { validate } from "../../middlewares/validate.middleware";
 import {
   createAppointmentSchema,
   updateAppointmentStatusSchema,
-} from "../../validators/appointment.validator"
+} from "../../validators/appointment.validator";
 
-const router = Router()
+const router = Router();
 
 router.post(
   "/book",
+  (req, res, next) => {
+    if (req.headers.authorization) {
+      return authenticate(req, res, next);
+    }
+    next();
+  },
   validate(createAppointmentSchema),
   createAppointment
-)
+);
 
 router.get(
   "/my-appointments",
+  (req, res, next) => {
+    if (req.headers.authorization) {
+      return authenticate(req, res, next);
+    }
+    next();
+  },
   getMyAppointments
-)
+);
 
 router.get(
   "/doctor-schedule",
   authenticate,
-  authorize("DOCTOR", "ADMIN"),
+  authorize("DOCTOR", "ADMIN", "STAFF"),
   getDoctorAppointments
-)
+);
 
 router.get(
   "/",
   authenticate,
-  authorize("DOCTOR", "ADMIN"),
+  authorize("DOCTOR", "ADMIN", "STAFF"),
   getDoctorAppointments
-)
+);
+
+router.get(
+  "/:id",
+  authenticate,
+  authorize("PATIENT", "DOCTOR", "ADMIN", "STAFF"),
+  getAppointmentById
+);
 
 router.patch(
   "/:id/status",
   authenticate,
-  authorize("DOCTOR", "ADMIN"),
+  authorize("DOCTOR", "ADMIN", "STAFF"),
   validate(updateAppointmentStatusSchema),
   updateAppointmentStatus
-)
+);
 
 router.patch(
   "/:id/cancel",
   authenticate,
-  authorize("PATIENT", "ADMIN", "DOCTOR"),
+  authorize("PATIENT", "ADMIN", "DOCTOR", "STAFF"),
   cancelAppointment
-)
+);
 
-export default router
+export default router;

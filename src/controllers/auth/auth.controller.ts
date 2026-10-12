@@ -9,6 +9,13 @@ import {
   updateProfileService,
 } from "../../services/auth/auth.services";
 
+const getCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: (process.env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
 export const register = async (
   req: Request,
   res: Response,
@@ -32,19 +39,17 @@ export const login = async (
   next: NextFunction
 ) => {
   try {
-    const { accessToken, refreshToken } = await loginUser(req.body);
+    const { accessToken, refreshToken, user } = await loginUser(req.body);
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie("refreshToken", refreshToken, getCookieOptions());
 
     res.status(200).json({
       success: true,
       message: "User logged in successfully",
-      accessToken,
+      data: {
+        accessToken,
+        user,
+      },
     });
   } catch (error) {
     next(error);
@@ -63,7 +68,7 @@ export const refreshToken = async (
     res.status(200).json({
       success: true,
       message: "Access token refreshed successfully",
-      result,
+      data: result,
     });
   } catch (error) {
     next(error);
@@ -79,7 +84,7 @@ export const logout = async (
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: (process.env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
     });
 
     res.status(200).json({
@@ -97,8 +102,8 @@ export const getMe = async (
   next: NextFunction
 ) => {
   try {
-    const userId = req.user!.userId;
-    const user = await getMyProfile(userId);
+    const userId = req.user?.userId;
+    const user = await getMyProfile(userId as string);
 
     res.status(200).json({
       success: true,
@@ -117,10 +122,10 @@ export const changePassword = async (
 ) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    const userId = req.user!.userId;
+    const userId = req.user?.userId;
 
     const result = await changePasswordService({
-      userId,
+      userId: userId as string,
       oldPassword,
       newPassword,
     });
@@ -140,16 +145,8 @@ export const updateProfile = async (
   next: NextFunction
 ) => {
   try {
-    const {
-      email: _email,
-      password: _password,
-      role: _role,
-      id: _id,
-      ...allowedUpdates
-    } = req.body;
-    const userId = req.user!.userId;
-
-    const user = await updateProfileService(userId, allowedUpdates);
+    const userId = req.user?.userId;
+    const user = await updateProfileService(userId as string, req.body);
 
     res.status(200).json({
       success: true,
@@ -167,14 +164,14 @@ export const deleteAccount = async (
   next: NextFunction
 ) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.user?.userId;
 
-    const result = await deleteAccountService(userId);
+    const result = await deleteAccountService(userId as string);
 
     res.clearCookie("refreshToken", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: (process.env.NODE_ENV === "production" ? "none" : "lax") as "none" | "lax",
     });
 
     res.status(200).json({

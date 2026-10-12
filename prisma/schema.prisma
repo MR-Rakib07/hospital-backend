@@ -79,6 +79,7 @@ model User {
 
   doctorProfile        DoctorProfile?
   adminProfile         AdminProfile?
+  staffProfile         StaffProfile?
   appointments         Appointment[]  @relation("PatientAppointments")
   
   createdAt            DateTime       @default(now())
@@ -116,20 +117,33 @@ model DoctorProfile {
 }
 
 model AdminProfile {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String?  @unique @db.ObjectId
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String?   @unique @db.ObjectId
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   designation String?
   department  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@map("admin_profiles")
+}
+
+model StaffProfile {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String?   @unique @db.ObjectId
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  counterNumber String?
+  department    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("staff_profiles")
 }
 
 model Appointment {
   id              String            @id @default(auto()) @map("_id") @db.ObjectId
   serialNumber    Int
+  serialCode      String?
   appointmentDate DateTime
   type            AppointmentType   @default(OFFLINE)
   status          AppointmentStatus @default(PENDING)
@@ -137,7 +151,7 @@ model Appointment {
 
   patientName     String
   patientPhone    String
-  patientEmail    String
+  patientEmail    String?
   patientAge      Int?
   patientGender   Gender?
 
@@ -159,6 +173,9 @@ model Appointment {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
+  @@index([patientPhone, serialNumber])
+  @@index([appointmentDate, doctorId])
+  @@index([serialCode])
   @@map("appointments")
 }
 
@@ -177,20 +194,20 @@ model Prescription {
 }
 
 model Department {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  name            String   @unique
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  name            String    @unique
   specializations String[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@map("departments")
 }
 
 model Designation {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@map("designations")
 }

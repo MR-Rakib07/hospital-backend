@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import {
   createDepartmentService,
   createDesignationService,
+  deleteDepartmentService,
+  deleteDesignationService,
   getAllDepartmentsService,
   getAllDesignationsService,
   getDoctorConfigService,
@@ -63,18 +65,54 @@ export const createDepartment = async (
 };
 
 export const updateDepartment = async (
-  req: Request,
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const id = String(req.params.id);
+    const { id } = req.params;
     const department = await updateDepartmentService(id, req.body);
 
     res.status(200).json({
       success: true,
       message: "Department updated successfully",
       data: department,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteDepartment = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await deleteDepartmentService(id);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllDesignations = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const designations = await getAllDesignationsService();
+
+    res.status(200).json({
+      success: true,
+      message: "Designations fetched successfully",
+      data: designations,
     });
   } catch (error) {
     next(error);
@@ -99,18 +137,18 @@ export const createDesignation = async (
   }
 };
 
-export const getAllDesignations = async (
-  _req: Request,
+export const deleteDesignation = async (
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const designations = await getAllDesignationsService();
+    const { id } = req.params;
+    const result = await deleteDesignationService(id);
 
     res.status(200).json({
       success: true,
-      message: "Designations fetched successfully",
-      data: designations,
+      message: result.message,
     });
   } catch (error) {
     next(error);

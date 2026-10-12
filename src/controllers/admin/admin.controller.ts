@@ -4,6 +4,7 @@ import {
   getAllUsersService,
   getUserByIdService,
   createAdminByAdminService,
+  createStaffByAdminService,
   updateUserRoleService,
   updateUserInfoByAdminService,
   deleteUserByAdminService,
@@ -76,6 +77,23 @@ export const createAdmin = async (
       success: true,
       message: 'New Admin created successfully',
       data: newAdmin,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createStaff = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const newStaff = await createStaffByAdminService(req.body);
+    res.status(201).json({
+      success: true,
+      message: 'New Staff created successfully',
+      data: newStaff,
     });
   } catch (error) {
     next(error);

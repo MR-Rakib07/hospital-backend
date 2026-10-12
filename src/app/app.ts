@@ -10,6 +10,7 @@ import doctorRoutes from "../routes/doctor/doctor.routes";
 import adminRoutes from '../routes/admin/admin.routes';
 import appointmentRoutes from "../routes/appointment/appointment.routes";
 import departmentRoutes from "../routes/department/department.routes";
+import staffRoutes from "../routes/staff/staff.routes"
 
 const app: Application = express();
 
@@ -43,6 +44,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/departments", departmentRoutes);
+app.use("/api/staffs", staffRoutes);
 
 
 

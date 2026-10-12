@@ -4,7 +4,7 @@ import type {
   LoginUserInput,
   RegisterUserInput,
   UpdateProfileInput,
-} from "../../validators/user.validatores";
+} from "../../validators/auth.validator";
 import { AppError } from "../../errors/AppError";
 import { generateAccessToken, generateRefreshToken } from "../../utils/jwt";
 import jwt, { type JwtPayload } from "jsonwebtoken";
@@ -18,6 +18,7 @@ interface ChangePasswordInput {
 interface UserTokenPayload extends JwtPayload {
   id: string;
   email: string;
+  role: string;
 }
 
 export const registerUser = async (data: RegisterUserInput) => {
@@ -35,6 +36,16 @@ export const registerUser = async (data: RegisterUserInput) => {
     data: {
       ...data,
       password: hashedPass,
+      ...(data.role === "STAFF" && {
+        staffProfile: {
+          create: {},
+        },
+      }),
+    },
+    include: {
+      doctorProfile: true,
+      adminProfile: true,
+      staffProfile: true,
     },
   });
 
@@ -45,10 +56,19 @@ export const registerUser = async (data: RegisterUserInput) => {
 export const loginUser = async (data: LoginUserInput) => {
   const user = await prisma.user.findUnique({
     where: { email: data.email },
+    include: {
+      doctorProfile: true,
+      adminProfile: true,
+      staffProfile: true,
+    },
   });
 
-  if (!user) {
+  if (!user || user.isDeleted) {
     throw new AppError(401, "Invalid email or password");
+  }
+
+  if (!user.isActive) {
+    throw new AppError(403, "Your account has been deactivated. Please contact administration.");
   }
 
   const isPasswordMatch = await bcrypt.compare(data.password, user.password);
@@ -66,9 +86,12 @@ export const loginUser = async (data: LoginUserInput) => {
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
+  const { password: _password, ...safeUser } = user;
+
   return {
     accessToken,
     refreshToken,
+    user: safeUser,
   };
 };
 
@@ -89,8 +112,8 @@ export const refreshAccessToken = async (token: string) => {
     where: { id: decoded.id },
   });
 
-  if (!user) {
-    throw new AppError(404, "User not found");
+  if (!user || user.isDeleted || !user.isActive) {
+    throw new AppError(404, "User not found or account is inactive");
   }
 
   const newAccessToken = generateAccessToken({
@@ -108,10 +131,11 @@ export const getMyProfile = async (userId: string) => {
     include: {
       doctorProfile: true,
       adminProfile: true,
+      staffProfile: true,
     },
   });
 
-  if (!user) {
+  if (!user || user.isDeleted) {
     throw new AppError(404, "User not found");
   }
 
@@ -128,7 +152,7 @@ export const changePasswordService = async ({
     where: { id: userId },
   });
 
-  if (!user) {
+  if (!user || user.isDeleted) {
     throw new AppError(404, "User not found");
   }
 
@@ -155,7 +179,7 @@ export const updateProfileService = async (
     where: { id: userId },
   });
 
-  if (!user) {
+  if (!user || user.isDeleted) {
     throw new AppError(404, "User not found");
   }
 
@@ -165,7 +189,16 @@ export const updateProfileService = async (
     where: { id: userId },
     data: {
       ...restPayload,
-      ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+      ...(dateOfBirth && dateOfBirth !== ""
+        ? { dateOfBirth: new Date(dateOfBirth) }
+        : dateOfBirth === ""
+        ? { dateOfBirth: null }
+        : {}),
+    },
+    include: {
+      doctorProfile: true,
+      adminProfile: true,
+      staffProfile: true,
     },
   });
 
@@ -178,12 +211,16 @@ export const deleteAccountService = async (userId: string) => {
     where: { id: userId },
   });
 
-  if (!existingUser) {
+  if (!existingUser || existingUser.isDeleted) {
     throw new AppError(404, "User not found");
   }
 
-  await prisma.user.delete({
+  await prisma.user.update({
     where: { id: userId },
+    data: {
+      isDeleted: true,
+      isActive: false,
+    },
   });
 
   return { message: "Account deleted permanently" };

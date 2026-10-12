@@ -14,7 +14,7 @@ import {
   registerUserSchema,
   loginUserSchema,
   updateProfileSchema,
-} from '../../validators/user.validatores';
+} from '../../validators/auth.validator';
 import { authenticate } from '../../middlewares/auth.middleware';
 
 const router = Router();
