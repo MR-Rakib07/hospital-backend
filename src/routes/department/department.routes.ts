@@ -6,8 +6,9 @@ import {
   deleteDesignation,
   getAllDepartments,
   getAllDesignations,
-  getDoctorConfig,
+  getConfigByRole,
   updateDepartment,
+  updateDesignation,
 } from "../../controllers/department/department.controller";
 import { authenticate } from "../../middlewares/auth.middleware";
 import { authorize } from "../../middlewares/authorize.middleware";
@@ -16,11 +17,12 @@ import {
   createDepartmentSchema,
   createDesignationSchema,
   updateDepartmentSchema,
+  updateDesignationSchema,
 } from "../../validators/department.validator";
 
 const router = Router();
 
-router.get("/doctor-config", getDoctorConfig);
+router.get("/config", getConfigByRole);
 
 router.get("/designations", getAllDesignations);
 router.post(
@@ -29,6 +31,13 @@ router.post(
   authorize("ADMIN"),
   validate(createDesignationSchema),
   createDesignation
+);
+router.patch(
+  "/designations/:id",
+  authenticate,
+  authorize("ADMIN"),
+  validate(updateDesignationSchema),
+  updateDesignation
 );
 router.delete(
   "/designations/:id",

@@ -8,7 +8,6 @@ export const createDoctorSchema = z.object({
     fullname: z.string().trim().min(2, "Full name must be at least 2 characters long"),
     phone: z.string().trim().regex(bdPhoneRegex, "Please provide a valid phone number"),
     department: z.string().trim().min(1, "Department is required"),
-    specialization: z.string().trim().min(1, "Specialization is required"),
     designation: z.string().trim().optional(),
     experience: z.number().int().min(0).default(0),
     fee: z.number().min(1, "Consultation fee must be greater than 0"),
@@ -26,7 +25,6 @@ export const createDoctorSchema = z.object({
 export const updateDoctorSchema = z.object({
   body: z.object({
     department: z.string().trim().min(1).optional(),
-    specialization: z.string().trim().min(1).optional(),
     designation: z.string().trim().optional(),
     experience: z.number().int().min(0).optional(),
     fee: z.number().min(1).optional(),

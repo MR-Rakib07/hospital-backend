@@ -6,21 +6,23 @@ import {
   deleteDesignationService,
   getAllDepartmentsService,
   getAllDesignationsService,
-  getDoctorConfigService,
+  getConfigByRoleService,
   updateDepartmentService,
+  updateDesignationService,
 } from "../../services/department/department.services";
 
-export const getDoctorConfig = async (
-  _req: Request,
+export const getConfigByRole = async (
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const config = await getDoctorConfigService();
+    const roleType = (req.query.roleType as "DOCTOR" | "STAFF") || "DOCTOR";
+    const config = await getConfigByRoleService(roleType);
 
     res.status(200).json({
       success: true,
-      message: "Doctor configuration fetched successfully",
+      message: `${roleType} configuration fetched successfully`,
       data: config,
     });
   } catch (error) {
@@ -29,12 +31,13 @@ export const getDoctorConfig = async (
 };
 
 export const getAllDepartments = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const departments = await getAllDepartmentsService();
+    const roleType = req.query.roleType as "DOCTOR" | "STAFF" | undefined;
+    const departments = await getAllDepartmentsService(roleType);
 
     res.status(200).json({
       success: true,
@@ -102,12 +105,13 @@ export const deleteDepartment = async (
 };
 
 export const getAllDesignations = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const designations = await getAllDesignationsService();
+    const roleType = req.query.roleType as "DOCTOR" | "STAFF" | undefined;
+    const designations = await getAllDesignationsService(roleType);
 
     res.status(200).json({
       success: true,
@@ -125,11 +129,30 @@ export const createDesignation = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const designation = await createDesignationService(req.body.name);
+    const designation = await createDesignationService(req.body);
 
     res.status(201).json({
       success: true,
       message: "Designation created successfully",
+      data: designation,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateDesignation = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const designation = await updateDesignationService(id, req.body);
+
+    res.status(200).json({
+      success: true,
+      message: "Designation updated successfully",
       data: designation,
     });
   } catch (error) {

@@ -14,6 +14,11 @@ enum Role {
   STAFF
 }
 
+enum RoleType {
+  DOCTOR
+  STAFF
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -94,7 +99,6 @@ model DoctorProfile {
   user                User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   
   department          String
-  specialization      String
   designation         String?
   experience          Int            @default(0)
   fee                 Float          @default(0)
@@ -194,20 +198,23 @@ model Prescription {
 }
 
 model Department {
-  id              String    @id @default(auto()) @map("_id") @db.ObjectId
-  name            String    @unique
-  specializations String[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  roleType  RoleType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([name, roleType])
   @@map("departments")
 }
 
 model Designation {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  name      String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  roleType  RoleType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([name, roleType])
   @@map("designations")
 }

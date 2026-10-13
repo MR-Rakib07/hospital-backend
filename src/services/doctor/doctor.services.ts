@@ -29,7 +29,6 @@ export const createDoctorService = async (data: CreateDoctorInput) => {
       doctorProfile: {
         create: {
           department: data.department,
-          specialization: data.specialization,
           designation: data.designation,
           experience: data.experience ?? 0,
           fee: data.fee,
@@ -137,7 +136,6 @@ export const updateDoctorService = async (
     },
     data: {
       ...(data.department !== undefined && { department: data.department }),
-      ...(data.specialization !== undefined && { specialization: data.specialization }),
       ...(data.designation !== undefined && { designation: data.designation }),
       ...(data.experience !== undefined && { experience: data.experience }),
       ...(data.fee !== undefined && { fee: data.fee }),
