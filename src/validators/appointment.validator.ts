@@ -14,8 +14,6 @@ export const createAppointmentSchema = z.object({
         message: "Date must be in YYYY-MM-DD format",
       }),
 
-    type: z.enum(["ONLINE", "OFFLINE"]).default("OFFLINE"),
-
     problemDetails: z.string().optional().nullable(),
 
     patientName: z
@@ -50,6 +48,45 @@ export const updateAppointmentStatusSchema = z.object({
       "COMPLETED",
       "CANCELLED",
     ]),
+    paymentStatus: z.enum(["UNPAID", "PAID"]).optional(),
+    paidAmount: z.coerce.number().nonnegative().optional(),
+  }),
+});
+
+export const updateAppointmentDetailsSchema = z.object({
+  body: z.object({
+    appointmentDate: z
+      .string()
+      .refine((val) => DATE_REGEX.test(val), {
+        message: "Date must be in YYYY-MM-DD format",
+      })
+      .optional(),
+
+    problemDetails: z.string().optional().nullable(),
+
+    patientName: z
+      .string()
+      .min(2, "Patient name must be at least 2 characters")
+      .optional(),
+
+    patientPhone: z
+      .string()
+      .min(10, "Valid phone number is required")
+      .optional(),
+
+    patientEmail: z
+      .string()
+      .email()
+      .optional()
+      .nullable()
+      .or(z.literal("")),
+
+    patientAge: z.coerce.number().int().positive().optional().nullable(),
+
+    patientGender: z.enum(["MALE", "FEMALE", "OTHER"]).optional().nullable(),
+
+    paymentStatus: z.enum(["UNPAID", "PAID"]).optional(),
+    paidAmount: z.coerce.number().nonnegative().optional(),
   }),
 });
 
@@ -59,4 +96,8 @@ export type CreateAppointmentInput = z.infer<
 
 export type UpdateAppointmentStatusInput = z.infer<
   typeof updateAppointmentStatusSchema
+>["body"];
+
+export type UpdateAppointmentDetailsInput = z.infer<
+  typeof updateAppointmentDetailsSchema
 >["body"];

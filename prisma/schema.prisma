@@ -51,15 +51,9 @@ enum AppointmentStatus {
   CANCELLED
 }
 
-enum AppointmentType {
-  ONLINE
-  OFFLINE
-}
-
 enum PaymentStatus {
   UNPAID
   PAID
-  REFUNDED
 }
 
 model User {
@@ -94,52 +88,51 @@ model User {
 }
 
 model DoctorProfile {
-  id                  String         @id @default(auto()) @map("_id") @db.ObjectId
-  userId              String?        @unique @db.ObjectId
-  user                User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String?       @unique @db.ObjectId
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   
-  department          String
-  designation         String?
-  experience          Int            @default(0)
-  fee                 Float          @default(0)
-  teleconsultationFee Float?         @default(0)
-  image               String?
-  availableDays       String[]
-  visitingHours       String?
-  roomNumber          String?
-  floorNumber         String?
+  department    String
+  designation   String?
+  experience    Int           @default(0)
+  fee           Float         @default(0)
+  image         String?
+  availableDays String[]
+  visitingHours String?
+  roomNumber    String?
+  floorNumber   String?
   
-  isAvailable         Boolean        @default(true)
-  isEmployed          Boolean        @default(true)
+  isAvailable   Boolean       @default(true)
+  isEmployed    Boolean       @default(true)
 
-  appointments        Appointment[]  @relation("DoctorAppointments")
+  appointments  Appointment[] @relation("DoctorAppointments")
   
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@map("doctor_profiles")
 }
 
 model AdminProfile {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String?   @unique @db.ObjectId
-  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String?  @unique @db.ObjectId
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   designation String?
   department  String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("admin_profiles")
 }
 
 model StaffProfile {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String?   @unique @db.ObjectId
-  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String?  @unique @db.ObjectId
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   counterNumber String?
   department    String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@map("staff_profiles")
 }
@@ -149,7 +142,6 @@ model Appointment {
   serialNumber    Int
   serialCode      String?
   appointmentDate DateTime
-  type            AppointmentType   @default(OFFLINE)
   status          AppointmentStatus @default(PENDING)
   problemDetails  String?
 
@@ -159,11 +151,7 @@ model Appointment {
   patientAge      Int?
   patientGender   Gender?
 
-  meetingRoomId   String?
-  meetingLink     String?
-
   paymentStatus   PaymentStatus     @default(UNPAID)
-  transactionId   String?
   paidAmount      Float             @default(0)
 
   patientId       String?           @db.ObjectId

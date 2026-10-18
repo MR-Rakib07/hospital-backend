@@ -5,11 +5,13 @@ import {
   getAppointmentByIdService,
   getDoctorAppointmentsService,
   getMyAppointmentsService,
+  updateAppointmentDetailsService,
   updateAppointmentStatusService,
   type CreateAppointmentInput,
+  type UpdateAppointmentDetailsInput,
 } from "../../services/appointment/appointment.services";
 import { AppError } from "../../errors/AppError";
-import type { AppointmentStatus, Role } from "@prisma/client";
+import type { AppointmentStatus, PaymentStatus, Role } from "@prisma/client";
 
 export const createAppointment = async (
   req: Request,
@@ -18,10 +20,11 @@ export const createAppointment = async (
 ): Promise<void> => {
   try {
     const inputData = req.body as CreateAppointmentInput;
+    const currentUserId = req.user?.id || req.user?.userId;
 
     const appointment = await createAppointmentService({
       ...inputData,
-      patientId: inputData.patientId || req.user?.id || req.user?.userId,
+      patientId: currentUserId || inputData.patientId,
     });
 
     res.status(201).json({
@@ -40,24 +43,28 @@ export const getMyAppointments = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const identifier =
-      req.user?.id ||
-      req.user?.userId ||
-      (typeof req.query.phone === "string" ? req.query.phone.trim() : undefined) ||
-      (typeof req.query.email === "string" ? req.query.email.trim() : undefined);
+    const userId = req.user?.id || req.user?.userId;
+    const phone =
+      typeof req.query.phone === "string" ? req.query.phone.trim() : undefined;
+    const email =
+      typeof req.query.email === "string" ? req.query.email.trim() : undefined;
 
-    if (!identifier) {
+    if (!userId && !phone && !email) {
       throw new AppError(
         400,
-        "Please provide patient phone or email, or log in to view appointments"
+        "Please provide patient phone/email or login to view appointments"
       );
     }
 
-    const appointments = await getMyAppointmentsService(identifier);
+    const appointments = await getMyAppointmentsService({
+      userId,
+      phone,
+      email,
+    });
 
     res.status(200).json({
       success: true,
-      message: "My appointments fetched successfully",
+      message: "Appointments retrieved successfully",
       data: appointments,
     });
   } catch (error) {
@@ -81,9 +88,18 @@ export const getDoctorAppointments = async (
     const { doctorId, date, status } = req.query;
 
     const appointments = await getDoctorAppointmentsService(userId, userRole, {
-      doctorId: typeof doctorId === "string" && doctorId.trim().length > 0 ? doctorId.trim() : undefined,
-      date: typeof date === "string" && date.trim().length > 0 ? date.trim() : undefined,
-      status: typeof status === "string" && status.trim().length > 0 ? (status.trim() as AppointmentStatus) : undefined,
+      doctorId:
+        typeof doctorId === "string" && doctorId.trim().length > 0
+          ? doctorId.trim()
+          : undefined,
+      date:
+        typeof date === "string" && date.trim().length > 0
+          ? date.trim()
+          : undefined,
+      status:
+        typeof status === "string" && status.trim().length > 0
+          ? (status.trim() as AppointmentStatus)
+          : undefined,
     });
 
     res.status(200).json({
@@ -120,6 +136,44 @@ export const getAppointmentById = async (
   }
 };
 
+export const updateAppointmentDetails = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user?.id || req.user?.userId;
+    const userRole = req.user?.role as Role | undefined;
+
+    if (!userId || !userRole) {
+      throw new AppError(401, "Unauthorized access. Please log in first");
+    }
+
+    const { id } = req.params;
+
+    if (!id) {
+      throw new AppError(400, "Appointment ID is required");
+    }
+
+    const inputData = req.body as UpdateAppointmentDetailsInput;
+
+    const updatedAppointment = await updateAppointmentDetailsService(
+      id,
+      inputData,
+      userId,
+      userRole
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Appointment details updated successfully",
+      data: updatedAppointment,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateAppointmentStatus = async (
   req: Request<{ id: string }>,
   res: Response,
@@ -127,7 +181,11 @@ export const updateAppointmentStatus = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const { status } = req.body as { status: AppointmentStatus };
+    const { status, paymentStatus, paidAmount } = req.body as {
+      status: AppointmentStatus;
+      paymentStatus?: PaymentStatus;
+      paidAmount?: number;
+    };
 
     if (!id) {
       throw new AppError(400, "Appointment ID is required");
@@ -137,7 +195,14 @@ export const updateAppointmentStatus = async (
       throw new AppError(400, "Appointment status is required");
     }
 
-    const updatedAppointment = await updateAppointmentStatusService(id, status);
+    const updatedAppointment = await updateAppointmentStatusService(
+      id,
+      status,
+      {
+        paymentStatus,
+        paidAmount,
+      }
+    );
 
     res.status(200).json({
       success: true,

@@ -6,12 +6,14 @@ import {
   getDoctorAppointments,
   getMyAppointments,
   updateAppointmentStatus,
+  updateAppointmentDetails,
 } from "../../controllers/appointment/appointment.controller";
 import { authenticate } from "../../middlewares/auth.middleware";
 import { authorize } from "../../middlewares/authorize.middleware";
 import { validate } from "../../middlewares/validate.middleware";
 import {
   createAppointmentSchema,
+  updateAppointmentDetailsSchema,
   updateAppointmentStatusSchema,
 } from "../../validators/appointment.validator";
 
@@ -59,6 +61,14 @@ router.get(
   authenticate,
   authorize("PATIENT", "DOCTOR", "ADMIN", "STAFF"),
   getAppointmentById
+);
+
+router.patch(
+  "/:id",
+  authenticate,
+  authorize("ADMIN", "STAFF", "PATIENT"),
+  validate(updateAppointmentDetailsSchema),
+  updateAppointmentDetails
 );
 
 router.patch(
